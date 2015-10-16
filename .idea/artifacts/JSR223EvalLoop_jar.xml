@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="JSR223EvalLoop:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/JSR223EvalLoop_jar</output-path>
+    <root id="archive" name="JSR223EvalLoop.jar">
+      <element id="module-output" name="JSR223EvalLoop" />
+    </root>
+  </artifact>
+</component>

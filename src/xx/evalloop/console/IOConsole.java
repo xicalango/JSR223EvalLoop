@@ -6,6 +6,7 @@ import java.io.IOError;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.util.Optional;
 
 public final class IOConsole implements ConsoleAdapter {
 
@@ -38,9 +39,9 @@ public final class IOConsole implements ConsoleAdapter {
   }
 
   @Override
-  public String readLine() {
+  public Optional<String> readLine() {
     try {
-      return reader.readLine().trim();
+      return Optional.ofNullable(reader.readLine()).map(String::trim);
     } catch (IOException e) {
       throw new IOError(e);
     }

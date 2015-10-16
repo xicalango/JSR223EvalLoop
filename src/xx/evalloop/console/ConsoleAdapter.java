@@ -2,6 +2,7 @@ package xx.evalloop.console;
 
 import java.io.Reader;
 import java.io.Writer;
+import java.util.Optional;
 
 public interface ConsoleAdapter extends ConsoleOutput {
 
@@ -9,9 +10,9 @@ public interface ConsoleAdapter extends ConsoleOutput {
 
   public Writer getWriter();
 
-  public String readLine();
+  public Optional<String> readLine();
 
-  public default String readLine(String format, Object... pars) {
+  public default Optional<String> readLine(String format, Object... pars) {
     printf(format, pars);
     return readLine();
   }
