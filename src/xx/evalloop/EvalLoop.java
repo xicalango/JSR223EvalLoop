@@ -39,7 +39,6 @@ public class EvalLoop implements Runnable {
 
   private final ScriptEngineManager manager;
   private ScriptEngine engine;
-  private final Bindings bindings;
 
   private final ConsoleAdapter console;
 
@@ -59,6 +58,8 @@ public class EvalLoop implements Runnable {
 
   private final PrintWriter exceptionWriter;
 
+  private final Bindings bindings;
+
   public static EvalLoop getDefaultEvalLoop() {
     ScriptEngineManager mgr = new ScriptEngineManager();
     ScriptEngine engine = mgr.getEngineByExtension("js");
@@ -75,9 +76,12 @@ public class EvalLoop implements Runnable {
   public EvalLoop(ScriptEngineManager manager, ScriptEngine engine, ConsoleAdapter console) {
     this.manager = manager;
     this.engine = engine;
-    this.bindings = engine.createBindings();
-    this.engine.setBindings(bindings, ScriptContext.ENGINE_SCOPE);
     this.console = console;
+
+    this.bindings = new CommonBindings();
+
+    engine.setBindings(bindings, ScriptContext.ENGINE_SCOPE);
+
     exceptionWriter = new PrintWriter(console.getWriter());
 
     setPrompt("$l:$i> ");
@@ -109,26 +113,26 @@ public class EvalLoop implements Runnable {
       if (chars[i] == '$') {
         i++;
         switch (chars[i]) {
-        case '$':
-          sb.append('$');
-          break;
-        case 'i':
-          sb.append("%03d");
-          promptSuppliers.add(() -> inputCount);
-          break;
-        case 'e':
-          sb.append("%s");
-          promptSuppliers.add(() -> engine.getFactory().getEngineName());
-          break;
-        case 'l':
-          sb.append("%s");
-          promptSuppliers.add(() -> engine.getFactory().getLanguageName());
-          break;
-        case 'S':
-          sb.append(" ");
-          break;
-        default:
-          throw new IllegalArgumentException("Unknown format: " + chars[i]);
+          case '$':
+            sb.append('$');
+            break;
+          case 'i':
+            sb.append("%03d");
+            promptSuppliers.add(() -> inputCount);
+            break;
+          case 'e':
+            sb.append("%s");
+            promptSuppliers.add(() -> engine.getFactory().getEngineName());
+            break;
+          case 'l':
+            sb.append("%s");
+            promptSuppliers.add(() -> engine.getFactory().getLanguageName());
+            break;
+          case 'S':
+            sb.append(" ");
+            break;
+          default:
+            throw new IllegalArgumentException("Unknown format: " + chars[i]);
         }
       } else {
         sb.append(chars[i]);
@@ -144,18 +148,46 @@ public class EvalLoop implements Runnable {
     commands.put("prompt", p -> setPrompt(p));
     commands.put("engines", p -> {
       for (ScriptEngineFactory factory : manager.getEngineFactories()) {
-        console.printf("%s: %s %s\n", factory.getLanguageName(), factory.getEngineName(), factory.getExtensions().toString());
+        console.printf("%s: %s %s\n", factory.getLanguageName(), factory.getEngineName(), factory.getExtensions()
+            .toString());
       }
     });
     commands.put("setEngine", p -> hotSwapEngine(p));
     commands.put("describe", p -> printDescription(p));
     commands.put("stream.limit", p -> streamPrinter.setLimit(Integer.valueOf(p)));
     commands.put("stream.toggleNumLines", p -> streamPrinter.toggleNumLines());
-    commands.put("listCommands", p -> streamPrinter.print(commands.keySet().stream(), console));
+    commands.put("help", p -> streamPrinter.print(commands.keySet().stream().sorted(), console));
+    commands.put("bindings", p -> streamPrinter.print(getBindingsStream(), console));
+    commands.put("newInstance", p -> newInstance(p));
+    commands.put("giveBindings", p -> getBindings().put("_", getBindings()));
+  }
+
+  private void newInstance(String className) {
+    try {
+      Class<?> clazz = Class.forName(className);
+
+      Object newObject = clazz.newInstance();
+
+      getBindings().put("_", newObject);
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  private Stream<String> getBindingsStream() {
+    final Bindings bindings = getBindings();
+    return bindings.keySet().stream().sorted().map(key -> key + ": " + getClassName(bindings.get(key)));
+  }
+
+  private static String getClassName(Object val) {
+    if (val == null) {
+      return "(null)";
+    }
+    return val.getClass().getName();
   }
 
   private void printDescription(String p) {
-    Object o = bindings.get(p);
+    Object o = getBindings().get(p);
     if (o == null) {
       console.printf("%s = null\n", p);
       return;
@@ -178,6 +210,7 @@ public class EvalLoop implements Runnable {
     ScriptEngine newEngine = manager.getEngineByExtension(extension);
     if (newEngine != null) {
       engine = newEngine;
+
       engine.setBindings(bindings, ScriptContext.ENGINE_SCOPE);
     } else {
       console.printf("No such engine: %s\n", extension);
@@ -228,7 +261,7 @@ public class EvalLoop implements Runnable {
 
         printResult(result);
 
-        bindings.put("_", result);
+        getBindings().put("_", result);
       } catch (ScriptException e) {
         printScriptException(e);
         lastException = e;
