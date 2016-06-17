@@ -118,11 +118,11 @@ public class EvalLoop implements Runnable {
           break;
         case 'e':
           sb.append("%s");
-          promptSuppliers.add(() -> engine.getFactory().getEngineName());
+          promptSuppliers.add(engine.getFactory()::getEngineName);
           break;
         case 'l':
           sb.append("%s");
-          promptSuppliers.add(() -> engine.getFactory().getLanguageName());
+          promptSuppliers.add(engine.getFactory()::getLanguageName);
           break;
         case 'S':
           sb.append(" ");
@@ -141,14 +141,14 @@ public class EvalLoop implements Runnable {
   private void initCommands() {
     commands.put("quit", p -> running = false);
     commands.put("stacktrace", p -> printLastException());
-    commands.put("prompt", p -> setPrompt(p));
+    commands.put("prompt", this::setPrompt);
     commands.put("engines", p -> {
       for (ScriptEngineFactory factory : manager.getEngineFactories()) {
         console.printf("%s: %s %s\n", factory.getLanguageName(), factory.getEngineName(), factory.getExtensions().toString());
       }
     });
-    commands.put("setEngine", p -> hotSwapEngine(p));
-    commands.put("describe", p -> printDescription(p));
+    commands.put("setEngine", this::hotSwapEngine);
+    commands.put("describe", this::printDescription);
     commands.put("stream.limit", p -> streamPrinter.setLimit(Integer.valueOf(p)));
     commands.put("stream.toggleNumLines", p -> streamPrinter.toggleNumLines());
     commands.put("listCommands", p -> streamPrinter.print(commands.keySet().stream(), console));
@@ -214,7 +214,7 @@ public class EvalLoop implements Runnable {
       }
 
       try {
-        if (preprocessLine(line) == true) {
+        if (preprocessLine(line)) {
           continue;
         }
       } catch (Exception e) {
