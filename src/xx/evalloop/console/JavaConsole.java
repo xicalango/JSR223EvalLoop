@@ -38,6 +38,4 @@ public final class JavaConsole implements ConsoleAdapter {
         return console.writer();
     }
 
-    ;
-
 }

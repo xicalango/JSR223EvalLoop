@@ -6,13 +6,13 @@ import java.util.Optional;
 
 public interface ConsoleAdapter extends ConsoleOutput {
 
-  public Reader getReader();
+  Reader getReader();
 
-  public Writer getWriter();
+  Writer getWriter();
 
-  public Optional<String> readLine();
+  Optional<String> readLine();
 
-  public default Optional<String> readLine(String format, Object... pars) {
+  default Optional<String> readLine(String format, Object... pars) {
     printf(format, pars);
     return readLine();
   }
